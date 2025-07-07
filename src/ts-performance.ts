@@ -2,13 +2,15 @@
 
 export class TSPerformance {
   static fibonacci(n: number): number {
-    if (n <= 1) return n;
+    if (n === 0) return 0;
+    if (n === 1) return 1;
     let a = 0, b = 1;
     for (let i = 2; i <= n; i++) {
       const temp = a + b;
       a = b;
       b = temp;
     }
+    console.log(`TS fibonacci(${n}) =`, b, typeof b);
     return b;
   }
 

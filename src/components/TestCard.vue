@@ -1,12 +1,29 @@
 <template>
   <div class="test-card">
     <div class="test-header">
-      <span class="test-icon">{{ test.icon }}</span>
-      <h3 class="test-title">{{ test.name }}</h3>
+      <span class="test-icon">{{ config.icon }}</span>
+      <h3 class="test-title">{{ config.name }}</h3>
     </div>
-    <p class="test-description">{{ test.description }}</p>
+    <p class="test-description">{{ config.description }}</p>
+    
+    <div class="input-section">
+      <label class="input-label">{{ config.inputLabel }}</label>
+      <input
+        type="number"
+        :value="inputValue"
+        :min="config.min"
+        :max="config.max"
+        @input="handleInputChange"
+        class="input-field"
+        :disabled="isRunning"
+      />
+      <small class="input-hint">
+        Giá trị từ {{ config.min?.toLocaleString() }} đến {{ config.max?.toLocaleString() }}
+      </small>
+    </div>
+    
     <button
-      @click="$emit('run', test.name)"
+      @click="emit('run', config.name)"
       :disabled="isRunning"
       class="run-button"
     >
@@ -16,21 +33,38 @@
 </template>
 
 <script setup lang="ts">
+interface TestConfig {
+  name: string
+  description: string
+  icon: string
+  inputType: string
+  inputLabel: string
+  defaultValue: number
+  min: number
+  max: number
+}
+
 interface TestProps {
-  test: {
-    name: string
-    description: string
-    icon: string
-    wasmFn: () => any
-    tsFn: () => any
-  }
+  config: TestConfig
+  inputValue: number
   isRunning: boolean
 }
 
-defineProps<TestProps>()
-defineEmits<{
+const { config, inputValue, isRunning } = defineProps<TestProps>()
+
+const emit = defineEmits<{
   run: [testName: string]
+  'input-change': [value: number]
 }>()
+
+function handleInputChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  const value = parseInt(target.value, 10)
+  
+  if (!isNaN(value)) {
+    emit('input-change', value)
+  }
+}
 </script>
 
 <style scoped>
@@ -70,6 +104,47 @@ defineEmits<{
   color: #6b7280;
   margin-bottom: 1.5rem;
   line-height: 1.5;
+}
+
+.input-section {
+  margin-bottom: 1.5rem;
+}
+
+.input-label {
+  display: block;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.input-field {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.input-field:disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.input-hint {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6b7280;
+  font-size: 0.75rem;
 }
 
 .run-button {

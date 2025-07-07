@@ -17,11 +17,13 @@
 
       <div class="test-grid">
         <TestCard
-          v-for="test in tests"
-          :key="test.name"
-          :test="test"
-          :is-running="runningTests.has(test.name)"
+          v-for="config in testConfigs"
+          :key="config.name"
+          :config="config"
+          :input-value="testInputs[config.name as keyof typeof testInputs]"
+          :is-running="runningTests.has(config.name)"
           @run="runSingleTest"
+          @input-change="(value) => testInputs[config.name as keyof typeof testInputs] = value"
         />
       </div>
 
@@ -45,63 +47,133 @@ const isRunning = ref(false)
 const runningTests = reactive(new Set<string>())
 const results = ref<BenchmarkResult[]>([])
 
-const tests = [
+const testConfigs = [
   {
-    name: 'Fibonacci (n=40)',
-    description: 'Tính số Fibonacci thứ 40',
+    name: 'Fibonacci',
+    description: 'Tính số Fibonacci',
     icon: '🔢',
-    wasmFn: () => WASMPerformance.fibonacci(40),
-    tsFn: () => TSPerformance.fibonacci(40)
+    inputType: 'number',
+    inputLabel: 'Số thứ n:',
+    defaultValue: 40,
+    min: 1,
+    max: 50
   },
   {
-    name: 'Prime Sieve (100,000)',
-    description: 'Tìm số nguyên tố đến 100,000',
+    name: 'Prime Sieve',
+    description: 'Tìm số nguyên tố',
     icon: '🔍',
-    wasmFn: () => WASMPerformance.primeSieve(100000),
-    tsFn: () => TSPerformance.primeSieve(100000)
+    inputType: 'number',
+    inputLabel: 'Giới hạn:',
+    defaultValue: 100000,
+    min: 10,
+    max: 1000000
   },
   {
-    name: 'Quick Sort (50,000 items)',
-    description: 'Sắp xếp mảng 50,000 số ngẫu nhiên',
+    name: 'Quick Sort',
+    description: 'Sắp xếp mảng ngẫu nhiên',
     icon: '📊',
-    wasmFn: () => {
-      const arr = PerformanceBench.generateRandomArray(50000)
-      return WASMPerformance.quickSort(arr)
-    },
-    tsFn: () => {
-      const arr = PerformanceBench.generateRandomArray(50000)
-      return TSPerformance.quickSort(arr)
-    }
+    inputType: 'number',
+    inputLabel: 'Số phần tử:',
+    defaultValue: 50000,
+    min: 1000,
+    max: 100000
   },
   {
-    name: 'Matrix Multiply (200x200)',
-    description: 'Nhân hai ma trận 200x200',
+    name: 'Matrix Multiply',
+    description: 'Nhân hai ma trận vuông',
     icon: '🧮',
-    wasmFn: () => {
-      const a = PerformanceBench.generateRandomMatrix(200)
-      const b = PerformanceBench.generateRandomMatrix(200)
-      return WASMPerformance.matrixMultiply(a, b, 200)
-    },
-    tsFn: () => {
-      const a = PerformanceBench.generateRandomMatrix(200)
-      const b = PerformanceBench.generateRandomMatrix(200)
-      return TSPerformance.matrixMultiply(a, b, 200)
-    }
+    inputType: 'number',
+    inputLabel: 'Kích thước ma trận:',
+    defaultValue: 200,
+    min: 50,
+    max: 500
   },
   {
-    name: 'Image Blur (512x512)',
-    description: 'Làm mờ ảnh 512x512 pixels',
+    name: 'Image Blur',
+    description: 'Làm mờ ảnh vuông',
     icon: '🖼️',
-    wasmFn: () => {
-      const pixels = PerformanceBench.generateRandomImageData(512, 512)
-      return WASMPerformance.imageBlur(pixels, 512, 512)
-    },
-    tsFn: () => {
-      const pixels = PerformanceBench.generateRandomImageData(512, 512)
-      return TSPerformance.imageBlur(pixels, 512, 512)
-    }
+    inputType: 'number',
+    inputLabel: 'Kích thước ảnh:',
+    defaultValue: 512,
+    min: 128,
+    max: 1024
   }
 ]
+
+// Generate test functions based on configs and inputs
+function generateTestFunctions(config: any, input: number) {
+  const testName = config.name
+  const fullName = `${config.name} (${input.toLocaleString()})`
+  
+  switch (testName) {
+    case 'Fibonacci':
+      return {
+        name: fullName,
+        description: `${config.description} thứ ${input}`,
+        icon: config.icon,
+        wasmFn: () => WASMPerformance.fibonacci(input),
+        tsFn: () => TSPerformance.fibonacci(input)
+      }
+    case 'Prime Sieve':
+      return {
+        name: fullName,
+        description: `${config.description} đến ${input.toLocaleString()}`,
+        icon: config.icon,
+        wasmFn: () => WASMPerformance.primeSieve(input),
+        tsFn: () => TSPerformance.primeSieve(input)
+      }
+    case 'Quick Sort':
+      const sortArray = PerformanceBench.generateRandomArray(input)
+      return {
+        name: fullName,
+        description: `${config.description} ${input.toLocaleString()} phần tử`,
+        icon: config.icon,
+        wasmFn: () => {
+          return WASMPerformance.quickSort([...sortArray])
+        },
+        tsFn: () => {
+          return TSPerformance.quickSort([...sortArray])
+        }
+      }
+    case 'Matrix Multiply':
+      const matrixA = PerformanceBench.generateRandomMatrix(input)
+      const matrixB = PerformanceBench.generateRandomMatrix(input)
+      return {
+        name: fullName,
+        description: `${config.description} ${input}x${input}`,
+        icon: config.icon,
+        wasmFn: () => {
+          return WASMPerformance.matrixMultiply([...matrixA], [...matrixB], input)
+        },
+        tsFn: () => {
+          return TSPerformance.matrixMultiply([...matrixA], [...matrixB], input)
+        }
+      }
+    case 'Image Blur':
+      const pixels = PerformanceBench.generateRandomImageData(input, input)
+      return {
+        name: fullName,
+        description: `${config.description} ${input}x${input} pixels`,
+        icon: config.icon,
+        wasmFn: () => {
+          return WASMPerformance.imageBlur(new Uint8Array(pixels), input, input)
+        },
+        tsFn: () => {
+          return TSPerformance.imageBlur(new Uint8Array(pixels), input, input)
+        }
+      }
+    default:
+      throw new Error(`Unknown test: ${testName}`)
+  }
+}
+
+const testInputs = reactive({
+  'Fibonacci': 40,
+  'Prime Sieve': 100000,
+  'Quick Sort': 50000,
+  'Matrix Multiply': 200,
+  'Image Blur': 512
+})
 
 onMounted(async () => {
   try {
@@ -113,8 +185,11 @@ onMounted(async () => {
 })
 
 async function runSingleTest(testName: string) {
-  const test = tests.find(t => t.name === testName)
-  if (!test) return
+  const config = testConfigs.find(c => c.name === testName)
+  if (!config) return
+
+  const input = testInputs[testName as keyof typeof testInputs]
+  const test = generateTestFunctions(config, input)
 
   runningTests.add(testName)
   
@@ -126,7 +201,7 @@ async function runSingleTest(testName: string) {
     )
     
     // Update existing result or add new one
-    const existingIndex = results.value.findIndex(r => r.name === testName)
+    const existingIndex = results.value.findIndex((r: BenchmarkResult) => r.name === test.name)
     if (existingIndex >= 0) {
       results.value[existingIndex] = result
     } else {
@@ -143,8 +218,8 @@ async function runAllBenchmarks() {
   isRunning.value = true
   results.value = []
   
-  for (const test of tests) {
-    await runSingleTest(test.name)
+  for (const config of testConfigs) {
+    await runSingleTest(config.name)
   }
   
   isRunning.value = false

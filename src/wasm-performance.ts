@@ -29,7 +29,10 @@ export class WASMPerformance {
 
   static async fibonacci(n: number): Promise<number> {
     await this.init();
-    return wasmModule.fibonacci(n);
+    const result = wasmModule.fibonacci(n);
+    console.log(`WASM fibonacci(${n}) =`, result, typeof result);
+    // Convert BigInt to number if needed
+    return typeof result === 'bigint' ? Number(result) : result;
   }
 
   static async fibonacciRecursive(n: number): Promise<number> {
