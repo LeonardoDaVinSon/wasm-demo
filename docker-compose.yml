@@ -1,0 +1,23 @@
+services:
+  app:
+    image: node:18-alpine
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
+    depends_on:
+      - wasm-builder
+
+  wasm-builder:
+    image: rust:1.75
+    working_dir: /app/rust-wasm
+    volumes:
+      - .:/app
+    command: sh -c "curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh && wasm-pack build --target web && echo 'WASM build completed'"

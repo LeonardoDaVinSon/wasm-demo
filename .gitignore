@@ -1,0 +1,7 @@
+node_modules/
+/dist
+rust-wasm/target/
+rust-wasm/pkg/
+.DS_Store
+*.log
+.env
